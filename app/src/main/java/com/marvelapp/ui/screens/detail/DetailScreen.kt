@@ -1,5 +1,8 @@
 package com.marvelapp.ui.screens.detail
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.marvelapp.R
+import com.marvelapp.data.Character
 import com.marvelapp.data.Comic
 import com.marvelapp.data.ComicSummary
 import com.marvelapp.data.Event
@@ -55,9 +59,14 @@ import com.marvelapp.data.Serie
 import com.marvelapp.data.SeriesSummary
 import com.marvelapp.ui.screens.Screen
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun DetailScreen(vm: DetailViewModel, onBack: () -> Unit) {
+fun DetailScreen(
+    vm: DetailViewModel,
+    onBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val state by vm.state.collectAsState()
     val scrollState = rememberScrollState()
 
@@ -96,7 +105,7 @@ fun DetailScreen(vm: DetailViewModel, onBack: () -> Unit) {
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             contentWindowInsets = WindowInsets.safeDrawing
-        ) { padding ->
+        ) { padding ->/*
             if (state.loading) {
                 Box(
                     modifier = Modifier
@@ -106,98 +115,116 @@ fun DetailScreen(vm: DetailViewModel, onBack: () -> Unit) {
                 ) {
                     CircularProgressIndicator()
                 }
+            }*/
+            state.character?.let { character ->
+                CharacterDetail(character, vm, scrollState, padding,sharedTransitionScope,animatedVisibilityScope)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun CharacterDetail(
+    character: Character,
+    vm: DetailViewModel,
+    scrollState: ScrollState,
+    padding: PaddingValues,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+    with(sharedTransitionScope){
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .verticalScroll(scrollState)
+        ) {
+            val imageUrl = character.thumbnail?.let { "${it.path}.${it.extension}" }
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = character.name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(MaterialTheme.shapes.small)
+                    .parallaxLayoutModifier(
+                        scrollState,
+                        rate = 2
+                    )
+                    .sharedElement(
+                        rememberSharedContentState(key = "image-${character.id}"),
+                        animatedVisibilityScope
+                    )
+            )
+            Text(
+                text = "Name:",
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = character.name!!,
+                modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
+            )
+            Text(
+                text = "Description:",
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleLarge
+            )
+            val description = if (character.description.isNullOrEmpty()) {
+                "No description available"
+            } else {
+                character.description
+            }
+            Text(
+                text = description,
+                modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
+            )
+
+            Text(
+                text = "Comics: ${character.comics?.size ?: 0}",
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleLarge
+            )
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(character.comics ?: emptyList()) { comic ->
+                    ComicItem(comic, vm)
+                }
             }
 
-            state.character?.let { character ->
-                Column(
-                    modifier = Modifier
-                        .padding(padding)
-                        .verticalScroll(scrollState)
-                ) {
-                    val imageUrl = character.thumbnail?.let { "${it.path}.${it.extension}" }
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = character.name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .clip(MaterialTheme.shapes.small)
-                            .parallaxLayoutModifier(
-                                scrollState,
-                                rate = 2
-                            )
-                    )
-                    Text(
-                        text = "Name:",
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = "${character.name}",
-                        modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
-                    )
-                    Text(
-                        text = "Description:",
-                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    val description = if (character.description.isNullOrEmpty()) {
-                        "No description available"
-                    } else {
-                        character.description
-                    }
-                    Text(
-                        text = description,
-                        modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
-                    )
+            Text(
+                text = "Series: ${character.series?.size ?: 0}",
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleLarge
+            )
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(character.series ?: emptyList()) { serie ->
+                    SerieItem(serie, vm)
+                }
+            }
 
-                    Text(
-                        text = "Comics: ${character.comics?.size ?: 0}",
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(character.comics ?: emptyList()) { comic ->
-                            ComicItem(comic, vm)
-                        }
-                    }
-
-                    Text(
-                        text = "Series: ${character.series?.size ?: 0}",
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(character.series ?: emptyList()) { serie ->
-                            SerieItem(serie, vm)
-                        }
-                    }
-
-                    Text(
-                        text = "Events: ${character.events?.size ?: 0}",
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(character.events ?: emptyList()) { event ->
-                            EventItem(event, vm)
-                        }
-                    }
-
+            Text(
+                text = "Events: ${character.events?.size ?: 0}",
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleLarge
+            )
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(character.events ?: emptyList()) { event ->
+                    EventItem(event, vm)
                 }
             }
         }
     }
+
 }
 
 @Composable
@@ -230,7 +257,6 @@ fun ComicItem(comicSummary: ComicSummary, vm: DetailViewModel) {
     }
 }
 
-
 @Composable
 fun SerieItem(serieSummary: SeriesSummary, vm: DetailViewModel) {
     val serie by produceState<Serie?>(null, serieSummary) {
@@ -261,7 +287,6 @@ fun SerieItem(serieSummary: SeriesSummary, vm: DetailViewModel) {
         )
     }
 }
-
 
 @Composable
 fun EventItem(eventSummary: EventSummary, vm: DetailViewModel) {
@@ -302,5 +327,3 @@ fun Modifier.parallaxLayoutModifier(scrollState: ScrollState, rate: Int) =
             placeable.place(0, height)
         }
     }
-
-

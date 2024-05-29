@@ -1,5 +1,8 @@
 package com.marvelapp.ui.screens.home
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,11 +50,13 @@ import com.marvelapp.data.Character
 import com.marvelapp.data.Thumbnail
 import com.marvelapp.ui.screens.Screen
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
     onClick: (Character) -> Unit,
-    vm: HomeViewModel = viewModel()
+    vm: HomeViewModel = viewModel(),
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val state by vm.state.collectAsState()
 
@@ -70,33 +75,39 @@ fun HomeScreen(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             contentWindowInsets = WindowInsets.safeDrawing
         ) { padding ->
-            StartUi(state, padding, vm, onClick)
+            StartUi(state, padding, vm, onClick, sharedTransitionScope, animatedVisibilityScope)
         }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun StartUi(
     state: HomeViewModel.UiState,
     padding: PaddingValues,
     vm: HomeViewModel,
-    onClick: (Character) -> Unit
+    onClick: (Character) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     if (state.loading && state.characters.isEmpty()) {
         LoadingBar(padding)
     } else if (state.error != null) {
         ErrorMsg()
     } else {
-        LoadApi(padding, state, vm, onClick)
+        LoadApi(padding, state, vm, onClick, sharedTransitionScope, animatedVisibilityScope)
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun LoadApi(
     padding: PaddingValues,
     state: HomeViewModel.UiState,
     vm: HomeViewModel,
-    onClick: (Character) -> Unit
+    onClick: (Character) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     var isLoadingMore by remember { mutableStateOf(false) }
     LazyVerticalGrid(
@@ -117,7 +128,9 @@ private fun LoadApi(
             CharacterItem(
                 character = character,
                 onClick = { onClick(character) },
-                index = index
+                index = index,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
         item {}
@@ -178,29 +191,43 @@ fun LoadingBarPreview() {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun CharacterItem(character: Character, onClick: (Character) -> Unit, index: Int) {
-    Column(
-        modifier = Modifier.clickable { onClick(character) }
-    ) {
-        val imageUrl = character.thumbnail?.let { "${it.path}.${it.extension}" }
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = character.name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(2 / 3f)
-                .clip(MaterialTheme.shapes.small)
-        )
-        Text(
-            text = character.name!!,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 1,
-            modifier = Modifier.padding(8.dp)
-        )
+private fun CharacterItem(
+    character: Character,
+    onClick: (Character) -> Unit,
+    index: Int,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+    with(sharedTransitionScope) {
+        Column(
+            modifier = Modifier.clickable { onClick(character) }
+        ) {
+            val imageUrl = character.thumbnail?.let { "${it.path}.${it.extension}" }
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = character.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(2 / 3f)
+                    .sharedElement(
+                        rememberSharedContentState(key = "image-${character.id}"),
+                        animatedVisibilityScope
+                    )
+                    .clip(MaterialTheme.shapes.small)
+            )
+            Text(
+                text = character.name!!,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                modifier = Modifier.padding(8.dp)
+            )
+        }
     }
 }
+
 
 
 
