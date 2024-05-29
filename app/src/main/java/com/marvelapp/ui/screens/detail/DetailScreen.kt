@@ -64,6 +64,7 @@ import com.marvelapp.ui.screens.Screen
 fun DetailScreen(
     vm: DetailViewModel,
     onBack: () -> Unit,
+    imageUrl: String?,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
@@ -105,8 +106,18 @@ fun DetailScreen(
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             contentWindowInsets = WindowInsets.safeDrawing
-        ) { padding ->/*
-            if (state.loading) {
+        ) { padding ->
+            if (state.character != null || imageUrl != null) {
+                CharacterDetail(
+                    state.character,
+                    imageUrl,
+                    vm,
+                    scrollState,
+                    padding,
+                    sharedTransitionScope,
+                    animatedVisibilityScope
+                )
+            } else {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -115,122 +126,117 @@ fun DetailScreen(
                 ) {
                     CircularProgressIndicator()
                 }
-            }*/
-            state.character?.let { character ->
-                CharacterDetail(character, vm, scrollState, padding,sharedTransitionScope,animatedVisibilityScope)
             }
         }
     }
 }
 
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CharacterDetail(
-    character: Character,
+    character: Character?,
+    imageUrl: String?,
     vm: DetailViewModel,
     scrollState: ScrollState,
     padding: PaddingValues,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    with(sharedTransitionScope){
+    with(sharedTransitionScope) {
         Column(
             modifier = Modifier
                 .padding(padding)
                 .verticalScroll(scrollState)
         ) {
-            val imageUrl = character.thumbnail?.let { "${it.path}.${it.extension}" }
+            //val url = imageUrl ?: character?.thumbnail?.let { "${it.path}.${it.extension}" }
             AsyncImage(
                 model = imageUrl,
-                contentDescription = character.name,
+                contentDescription = character?.name,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(MaterialTheme.shapes.small)
-                    .parallaxLayoutModifier(
-                        scrollState,
-                        rate = 2
-                    )
+                    .parallaxLayoutModifier(scrollState, rate = 2)
                     .sharedElement(
-                        rememberSharedContentState(key = "image-${character.id}"),
+                        rememberSharedContentState(key = "image-${character?.id}"),
                         animatedVisibilityScope
                     )
             )
-            Text(
-                text = "Name:",
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = character.name!!,
-                modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
-            )
-            Text(
-                text = "Description:",
-                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
-                style = MaterialTheme.typography.titleLarge
-            )
-            val description = if (character.description.isNullOrEmpty()) {
-                "No description available"
-            } else {
-                character.description
-            }
-            Text(
-                text = description,
-                modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
-            )
-
-            Text(
-                text = "Comics: ${character.comics?.size ?: 0}",
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                style = MaterialTheme.typography.titleLarge
-            )
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(character.comics ?: emptyList()) { comic ->
-                    ComicItem(comic, vm)
+            character?.let {
+                Text(
+                    text = "Name:",
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = it.name!!,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
+                )
+                Text(
+                    text = "Description:",
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                val description = if (it.description.isNullOrEmpty()) {
+                    "No description available"
+                } else {
+                    it.description
                 }
-            }
-
-            Text(
-                text = "Series: ${character.series?.size ?: 0}",
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                style = MaterialTheme.typography.titleLarge
-            )
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(character.series ?: emptyList()) { serie ->
-                    SerieItem(serie, vm)
+                Text(
+                    text = description,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
+                )
+                Text(
+                    text = "Comics: ${character.comics?.size ?: 0}",
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(character.comics ?: emptyList()) { comic ->
+                        ComicItem(comic, vm)
+                    }
                 }
-            }
-
-            Text(
-                text = "Events: ${character.events?.size ?: 0}",
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-                style = MaterialTheme.typography.titleLarge
-            )
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(character.events ?: emptyList()) { event ->
-                    EventItem(event, vm)
+                Text(
+                    text = "Series: ${character.series?.size ?: 0}",
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(character.series ?: emptyList()) { serie ->
+                        SerieItem(serie, vm)
+                    }
+                }
+                Text(
+                    text = "Events: ${character.events?.size ?: 0}",
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(character.events ?: emptyList()) { event ->
+                        EventItem(event, vm)
+                    }
                 }
             }
         }
     }
-
 }
 
 @Composable
 fun ComicItem(comicSummary: ComicSummary, vm: DetailViewModel) {
     val comic by produceState<Comic?>(null, comicSummary) {
-        value = vm.fetchComicDetails(comicSummary.resourceURI?.substringAfterLast("/")?.toInt() ?: 0)
+        value =
+            vm.fetchComicDetails(comicSummary.resourceURI?.substringAfterLast("/")?.toInt() ?: 0)
     }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

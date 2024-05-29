@@ -14,6 +14,7 @@ import com.marvelapp.ui.screens.home.HomeScreen
 import com.marvelapp.ui.screens.splash.SplashScreen
 import com.marvelapp.ui.screens.splash.SplashViewModel
 
+// Navigation.kt
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Navigation() {
@@ -28,19 +29,19 @@ fun Navigation() {
             composable<Home> {
                 HomeScreen(
                     onClick = { character ->
-                        navController.navigate(Detail(character.id!!))
+                        navController.navigate(Detail(character.id!!, character.thumbnail?.let { "${it.path}.${it.extension}" }))
                     },
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@composable
                 )
             }
 
-
             composable<Detail> { backStackEntry ->
                 val detail = backStackEntry.toRoute<Detail>()
                 DetailScreen(
                     viewModel { DetailViewModel(detail.characterId) },
                     onBack = { navController.popBackStack() },
+                    imageUrl = detail.imageUrl,
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@composable
                 )
@@ -48,3 +49,5 @@ fun Navigation() {
         }
     }
 }
+
+

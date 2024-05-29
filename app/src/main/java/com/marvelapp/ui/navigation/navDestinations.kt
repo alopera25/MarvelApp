@@ -10,4 +10,4 @@ object Home
 object Splash
 
 @Serializable
-data class Detail (val characterId: Int)
+data class Detail (val characterId: Int, val imageUrl: String?)
