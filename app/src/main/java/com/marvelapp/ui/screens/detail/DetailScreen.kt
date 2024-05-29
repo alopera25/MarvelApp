@@ -45,10 +45,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.marvelapp.R
 import com.marvelapp.data.Character
 import com.marvelapp.data.Comic
@@ -58,6 +61,7 @@ import com.marvelapp.data.EventSummary
 import com.marvelapp.data.Serie
 import com.marvelapp.data.SeriesSummary
 import com.marvelapp.ui.screens.Screen
+import kotlinx.coroutines.Dispatchers
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -69,6 +73,7 @@ fun DetailScreen(
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val state by vm.state.collectAsState()
+    if(state.loading) return
     val scrollState = rememberScrollState()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -150,19 +155,28 @@ fun CharacterDetail(
                 .verticalScroll(scrollState)
         ) {
             //val url = imageUrl ?: character?.thumbnail?.let { "${it.path}.${it.extension}" }
+            val context = LocalContext.current
+            val imageRequest = ImageRequest.Builder(context)
+                .data(imageUrl)
+                .dispatcher(Dispatchers.IO)
+                .memoryCacheKey(imageUrl)
+                .diskCacheKey(imageUrl)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .build()
             AsyncImage(
-                model = imageUrl,
+                model = imageRequest,
                 contentDescription = character?.name,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(MaterialTheme.shapes.small)
                     .parallaxLayoutModifier(scrollState, rate = 2)
                     .sharedElement(
                         rememberSharedContentState(key = "image-${character?.id}"),
                         animatedVisibilityScope
                     )
+                    .clip(MaterialTheme.shapes.small)
             )
             character?.let {
                 Text(

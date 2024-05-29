@@ -40,15 +40,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.marvelapp.data.Character
-import com.marvelapp.data.Thumbnail
 import com.marvelapp.ui.screens.Screen
+import kotlinx.coroutines.Dispatchers
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -205,8 +208,18 @@ private fun CharacterItem(
             modifier = Modifier.clickable { onClick(character) }
         ) {
             val imageUrl = character.thumbnail?.let { "${it.path}.${it.extension}" }
+
+            val context = LocalContext.current
+            val imageRequest = ImageRequest.Builder(context)
+                .data(imageUrl)
+                .dispatcher(Dispatchers.IO)
+                .memoryCacheKey(imageUrl)
+                .diskCacheKey(imageUrl)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .build()
             AsyncImage(
-                model = imageUrl,
+                model = imageRequest,
                 contentDescription = character.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

@@ -21,7 +21,7 @@ class DetailViewModel(private val id: Int) : ViewModel() {
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     data class UiState(
-        val loading: Boolean = false,
+        val loading: Boolean = true,
         val character: Character? = null,
         val error: String? = null,
         val message: String? = null
@@ -33,12 +33,12 @@ class DetailViewModel(private val id: Int) : ViewModel() {
 
     private fun fetchCharacterDetails() {
         viewModelScope.launch {
-            _state.value = UiState(loading = true)
+//            _state.update { UiState(loading = true) }
             try {
                 val character = repository.fetchCharacterById(id)
-                _state.value = UiState(loading = false, character = character)
+                _state.update {  UiState(loading = false, character = character) }
             } catch (e: Exception) {
-                _state.value = UiState(loading = false, error = "Failed to fetch character details")
+                _state.update{ UiState(loading = false, error = "Failed to fetch character details") }
             }
         }
     }
